@@ -135,7 +135,7 @@ family_for_basename() {
     fm-arm-pretool-check.test.sh|fm-ask-user-authority.test.sh|\
     fm-bearings-board.test.sh|\
     fm-brief.test.sh|fm-vendor-auth-probe.test.sh|\
-    fm-calm-pi-extension.test.sh|fm-cd-pretool-check.test.sh|\
+    fm-calm-pi-extension.test.sh|fm-capsule.test.sh|fm-cd-pretool-check.test.sh|\
     fm-classify-decision-key.test.sh|\
     fm-composer-ghost.test.sh|fm-composer-lib.test.sh|\
     fm-crew-state.test.sh|fm-captain-hold-lifecycle.test.sh|\
@@ -907,7 +907,8 @@ families_for_changed_path() {
       # resolution in the caller; emit a marker family of __script__
       printf '%s\n' "__script__:$(basename "$path")"
       ;;
-    bin/fm-test-run.sh|bin/fm-test-isolation-proof.sh)
+    bin/fm-test-run.sh|bin/fm-test-isolation-proof.sh|\
+    bin/fm-capsule.sh|bin/capsule/*)
       printf '%s\n' pure-contract-unit
       ;;
     bin/backends/herdr*|bin/fm-herdr-lab.sh|tests/herdr-test-safety.sh)

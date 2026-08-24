@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "profile": "marooned-hostile-v1",
+  "claimStatus": "unverified-until-measured",
+  "armPolicy": {
+    "requireSameBoot": true,
+    "advisoryShaping": "refuse",
+    "onUnsatisfied": "refuse"
+  },
+  "requiredChecks": [
+    "docker-socket",
+    "podman-socket",
+    "containerd-socket",
+    "dbus-socket",
+    "ssh-agent-socket",
+    "systemd-socket",
+    "cloud-control-socket",
+    "outbound-network"
+  ],
+  "hostCandidateOrder": [
+    {
+      "match": {
+        "os": "linux",
+        "distribution": "fedora"
+      },
+      "candidates": [
+        "podman-rootless",
+        "docker-sandboxes"
+      ]
+    },
+    {
+      "match": {
+        "os": "linux",
+        "distribution": "ubuntu"
+      },
+      "candidates": [
+        "docker-sandboxes",
+        "podman-rootless"
+      ]
+    },
+    {
+      "match": {
+        "os": "linux",
+        "distribution": "*"
+      },
+      "candidates": [
+        "podman-rootless",
+        "docker-sandboxes"
+      ]
+    }
+  ],
+  "adapters": {
+    "podman-rootless": {
+      "implementation": "bin/capsule/adapters/podman-rootless.sh",
+      "vendorHostSupport": [
+        "Linux with a working rootless Podman configuration"
+      ],
+      "fixtureImage": "docker.io/library/python@sha256:0ad7f98a97b1b8fcc226f5cbe49f0b95cd6f624582cdc6fbf7e41312075cb401"
+    },
+    "docker-sandboxes": {
+      "implementation": "bin/capsule/adapters/docker-sandboxes.sh",
+      "vendorHostSupport": [
+        "Ubuntu 24.04 or later with KVM",
+        "macOS 14 or later on Apple silicon",
+        "Windows 11 with Windows Hypervisor Platform"
+      ],
+      "measurementOnUnsupportedHost": "informative-only"
+    }
+  }
+}

@@ -24,6 +24,15 @@ Wake, watcher, away-mode, and Relay-specific state mechanics remain with their n
 `AGENTS.md` retains the run-once and read-once operator rules, lock-refusal safety, installation consent, and direct-report recovery boundaries because those facts apply at every session start.
 Ordinary dead-direct-report recovery is owned by `stuck-crewmate-recovery`, while persistent-secondmate recovery is owned by `secondmate-provisioning`.
 
+## Capsule containment (config/containment.json)
+
+**Verified:** [`docs/containment.md`](containment.md) owns the operator workflow, bounded claims, hostile-fixture floor, and current result links for the first Marooned capsule slice.
+**Verified:** A readable `config/containment.json` under the effective `FM_HOME` overrides the tracked `bin/capsule/default-config.json`, while an explicit `--config` path has highest precedence.
+**Verified:** This local file contains candidate ordering and adapter measurement policy, but it cannot declare an adapter proved because `bin/fm-capsule.sh arm` requires matching machine evidence from the current boot.
+**Verified:** The validator accepts only `refuse` for advisory shaping and unsatisfied evidence, so configuration cannot turn environment shaping into a containment claim.
+**Verified:** This local configuration is not inherited into secondmate homes in this slice.
+**Unverified:** No adapter is a general reference or default merely because it appears first in a host candidate order.
+
 ## Pi Calm preference (config/calm)
 
 The Pi Calm extension stores the captain's home-local presentation choice in gitignored `config/calm` under the effective Firstmate home, resolved from `FM_HOME`, then `FM_ROOT_OVERRIDE`, then the tracked code root derived from the extension path, or under `FM_CONFIG_OVERRIDE` when that test and specialized-setup override is present.

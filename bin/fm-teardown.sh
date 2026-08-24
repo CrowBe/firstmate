@@ -693,7 +693,7 @@ ORCA_PATH_MATCH_VERIFIED=0
 KIND=$(grep '^kind=' "$META" | cut -d= -f2- || true)
 [ -n "$KIND" ] || KIND=ship
 MODE=$(grep '^mode=' "$META" | cut -d= -f2- || true)
-[ -n "$MODE" ] || MODE=direct-PR
+[ -n "$MODE" ] || MODE=no-mistakes
 PUBLIC_FOLLOWUP_HOME=$FM_HOME
 PUBLIC_FOLLOWUP_STATE=$STATE
 PUBLIC_FOLLOWUP_WORK_HOME=main
@@ -2646,8 +2646,7 @@ fi
 # dedicated process-event and firstmate-home removal machinery further below,
 # not by task-worktree cleanup.
 if [ "$KIND" != secondmate ]; then
-  # This fork does not run no-mistakes, so teardown never queries or aborts an
-  # upstream run before returning the worker's worktree.
+  conclude_task_no_mistakes_run "$WT"
   reap_task_worktree_processes worktree "$WT" "$TASK_TMP"
 fi
 

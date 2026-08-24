@@ -70,7 +70,7 @@ EOF
   while IFS='|' read -r label flags expect; do
     [ -n "$label" ] || continue
     n=$((n + 1))
-    write_brief "$home" "delivery-required-$n" direct-PR
+    write_brief "$home" "delivery-required-$n" no-mistakes
     # shellcheck disable=SC2086  # flags is an intentional word-split arg list
     out=$(run_spawn "$home" "$fakebin" "delivery-required-$n" "$proj" claude $flags)
     status=$?
@@ -79,11 +79,11 @@ EOF
     assert_absent "$home/state/delivery-required-$n.meta" "$label: refused spawn wrote task metadata"
   done <<'ROWS'
 missing both flags||ship spawns require --mode
-missing --yolo|--mode direct-PR|ship spawns require --yolo
+missing --yolo|--mode no-mistakes|ship spawns require --yolo
 missing --mode|--yolo off|ship spawns require --mode
-unknown mode|--mode nope --yolo off|must be one of direct-PR, local-only
-unknown yolo|--mode direct-PR --yolo maybe|--yolo must be on or off
-retired mode|--mode no-mistakes --yolo off|This fork does not run no-mistakes
+unknown mode|--mode nope --yolo off|must be one of no-mistakes, direct-PR, local-only
+unknown yolo|--mode no-mistakes --yolo maybe|--yolo must be on or off
+conditional policy as a task mode|--mode no-mistakes-prod-only --yolo off|classify this task's surface
 ROWS
   pass "fm-spawn: a ship spawn requires a valid explicit mode and yolo before anything is created"
 }
@@ -108,7 +108,7 @@ EOF
   [ "$status" -ne 0 ] || fail "a scout spawn carrying --yolo should exit non-zero"
   assert_contains "$out" "--yolo applies only to ship spawns" "scout spawn did not refuse --yolo"
 
-  out=$(run_spawn "$home" "$fakebin" delivery-sm-a2 "$home" --secondmate --mode direct-PR --yolo off)
+  out=$(run_spawn "$home" "$fakebin" delivery-sm-a2 "$home" --secondmate --mode no-mistakes --yolo off)
   status=$?
   [ "$status" -ne 0 ] || fail "a secondmate spawn carrying delivery flags should exit non-zero"
   assert_contains "$out" "applies only to ship spawns" "secondmate spawn did not refuse the delivery flags"
@@ -124,12 +124,12 @@ test_spawn_refuses_a_brief_mode_mismatch() {
   IFS='|' read -r home proj fakebin <<EOF
 $rec
 EOF
-  write_brief "$home" delivery-mismatch-b1 local-only
+  write_brief "$home" delivery-mismatch-b1 no-mistakes
   out=$(run_spawn "$home" "$fakebin" delivery-mismatch-b1 "$proj" claude --mode direct-PR --yolo off)
   status=$?
   [ "$status" -ne 0 ] || fail "a brief/spawn mode mismatch should exit non-zero"
   assert_contains "$out" "delivery mismatch for delivery-mismatch-b1" "mismatch refusal did not name the task"
-  assert_contains "$out" "the brief says mode=local-only but this spawn passed --mode direct-PR" \
+  assert_contains "$out" "the brief says mode=no-mistakes but this spawn passed --mode direct-PR" \
     "mismatch refusal did not show both sides of the disagreement"
   assert_absent "$home/state/delivery-mismatch-b1.meta" "mismatched spawn wrote task metadata"
 
@@ -147,8 +147,10 @@ EOF
 }
 
 # The registry is the captain's standing posture, so dropping below its rigor is
-# allowed but never silent, while matching it stays quiet. An unregistered
-# project resolves to the direct-PR standing default (AGENTS.md section 7).
+# allowed but never silent, while matching or exceeding it stays quiet. An
+# unregistered project resolves to the same no-mistakes standing default
+# (AGENTS.md section 7), so a downgrade there is announced too. A conditional
+# policy is excluded because both of its legs are legitimate classifications.
 test_spawn_notices_a_rigor_downgrade_against_the_registry() {
   local rec home proj fakebin out label mode registry expect registered n=0
   while IFS='|' read -r label registry mode expect registered; do
@@ -171,11 +173,12 @@ EOF
           "$label: printed a deviation notice that is not a downgrade" ;;
     esac
   done <<'ROWS'
-direct-PR project shipped local-only|- proj [direct-PR] - fixture (added 2026-01-01)|local-only|notice|direct-PR
-direct-PR project shipped direct-PR|- proj [direct-PR] - fixture (added 2026-01-01)|direct-PR|quiet|direct-PR
-local-only project shipped local-only|- proj [local-only] - fixture (added 2026-01-01)|local-only|quiet|local-only
-retired project maps direct-PR|- proj [no-mistakes] - fixture (added 2026-01-01)|direct-PR|quiet|direct-PR
-unregistered project resolves to direct-PR|- other [direct-PR] - fixture (added 2026-01-01)|local-only|notice|direct-PR
+no-mistakes project shipped direct-PR|- proj [no-mistakes] - fixture (added 2026-01-01)|direct-PR|notice|no-mistakes
+no-mistakes project shipped local-only|- proj [no-mistakes] - fixture (added 2026-01-01)|local-only|notice|no-mistakes
+no-mistakes project shipped no-mistakes|- proj [no-mistakes] - fixture (added 2026-01-01)|no-mistakes|quiet|no-mistakes
+local-only project shipped no-mistakes|- proj [local-only] - fixture (added 2026-01-01)|no-mistakes|quiet|local-only
+conditional policy shipped direct-PR|- proj [no-mistakes-prod-only] - fixture (added 2026-01-01)|direct-PR|quiet|no-mistakes-prod-only
+unregistered project resolves to the no-mistakes standing default|- other [no-mistakes] - fixture (added 2026-01-01)|direct-PR|notice|no-mistakes
 ROWS
   pass "fm-spawn: a rigor downgrade against the registered posture is announced, never blocked"
 }
@@ -219,10 +222,10 @@ test_promote_requires_and_records_the_delivery_contract() {
   [ "$status" -ne 0 ] || fail "promotion without --yolo should exit non-zero"
   assert_contains "$out" "promotion requires --yolo" "promote refusal did not name the missing merge posture"
 
-  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" promote-d1 --mode no-mistakes --yolo off 2>&1)
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" promote-d1 --mode no-mistakes-prod-only --yolo off 2>&1)
   status=$?
-  [ "$status" -ne 0 ] || fail "promotion on a retired mode should exit non-zero"
-  assert_contains "$out" "This fork does not run no-mistakes" "promote did not refuse the retired mode"
+  [ "$status" -ne 0 ] || fail "promotion on a conditional policy should exit non-zero"
+  assert_contains "$out" "classify this task's surface" "promote did not refuse the conditional policy as a task mode"
 
   out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" promote-d1 --mode direct-PR --yolo on 2>&1)
   status=$?
@@ -235,9 +238,10 @@ test_promote_requires_and_records_the_delivery_contract() {
   pass "fm-promote: promotion requires the delivery contract and records it exactly once"
 }
 
-# The registry parser survives for mechanical consumers only. It maps retired
-# postures to direct-PR and keeps local-only explicit.
-test_project_mode_maps_retired_postures_to_direct_pr() {
+# The registry parser survives for the mechanical consumers only. It accepts the
+# conditional policy, maps it to its most rigorous leg for them, and exposes the
+# raw annotation for the one caller that must tell a policy from a flat mode.
+test_project_mode_maps_the_conditional_policy() {
   local home out err
   home="$TMP_ROOT/project-mode/home"
   mkdir -p "$home/data"
@@ -248,24 +252,24 @@ test_project_mode_maps_retired_postures_to_direct_pr() {
 - typoproj [no-mistakez] - fixture (added 2026-01-01)
 EOF
   out=$(FM_HOME="$home" "$PROJECT_MODE" prodproj 2>/dev/null)
-  [ "$out" = "direct-PR off" ] || fail "retired policy did not map to direct-PR (got '$out')"
+  [ "$out" = "no-mistakes off" ] || fail "conditional policy did not map to its most rigorous leg (got '$out')"
   err=$(FM_HOME="$home" "$PROJECT_MODE" prodproj 2>&1 >/dev/null)
-  assert_contains "$err" "does not run no-mistakes" "retired policy did not report its mapping"
+  [ -z "$err" ] || fail "a registered conditional policy still warned as unknown: $err"
 
   out=$(FM_HOME="$home" "$PROJECT_MODE" yoloproj 2>/dev/null)
-  [ "$out" = "direct-PR on" ] || fail "retired policy dropped its +yolo posture (got '$out')"
+  [ "$out" = "no-mistakes on" ] || fail "conditional policy dropped its +yolo posture (got '$out')"
 
   out=$(FM_HOME="$home" "$PROJECT_MODE" --raw prodproj 2>/dev/null)
-  [ "$out" = "direct-PR off" ] || fail "--raw did not map a retired annotation (got '$out')"
+  [ "$out" = "no-mistakes-prod-only off" ] || fail "--raw did not expose the registered annotation (got '$out')"
 
   out=$(FM_HOME="$home" "$PROJECT_MODE" --raw flatproj 2>/dev/null)
   [ "$out" = "direct-PR off" ] || fail "--raw altered a flat registered mode (got '$out')"
 
   out=$(FM_HOME="$home" "$PROJECT_MODE" typoproj 2>/dev/null)
-  [ "$out" = "direct-PR off" ] || fail "a typo'd mode no longer falls back to the direct-PR default"
+  [ "$out" = "no-mistakes off" ] || fail "a typo'd mode no longer falls back to the most rigorous default"
   err=$(FM_HOME="$home" "$PROJECT_MODE" typoproj 2>&1 >/dev/null)
   assert_contains "$err" "unknown mode" "a typo'd registry mode stopped warning"
-  pass "fm-project-mode: retired postures map to direct-PR for mechanical callers"
+  pass "fm-project-mode: the conditional policy is accepted, mapped for mechanical callers, and readable raw"
 }
 
 test_ship_spawn_requires_a_valid_delivery_contract
@@ -274,5 +278,5 @@ test_spawn_refuses_a_brief_mode_mismatch
 test_spawn_notices_a_rigor_downgrade_against_the_registry
 test_scout_records_no_delivery_posture
 test_promote_requires_and_records_the_delivery_contract
-test_project_mode_maps_retired_postures_to_direct_pr
+test_project_mode_maps_the_conditional_policy
 echo "# all fm-task-delivery tests passed"

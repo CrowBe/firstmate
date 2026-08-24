@@ -32,6 +32,8 @@
 
 **Verified:** Admission refuses an unexpected ref set, corrupt or malformed objects, object closure outside `base..head`, gitlinks, `.gitmodules`, unresolved Git LFS pointers, and objects larger than `FM_HANDOFF_MAX_OBJECT_BYTES`.
 
+**Verified:** `FM_HANDOFF_MAX_OBJECT_BYTES` defaults to 16 MiB when it is not set.
+
 **Verified:** Every admit, refusal, session-end check, and review appends a secret-free line to `state/handoff/<task>.records`.
 
 ## Session-end run review

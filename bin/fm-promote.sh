@@ -11,8 +11,8 @@
 # alongside the kind= flip. Firstmate resolves both at promotion time, having just
 # read the scout's report (AGENTS.md section 7); data/projects.md holds the
 # captain's standing posture as context, and this script never looks it up.
-# This fork does not run no-mistakes, so retired modes are refused.
-# Usage: fm-promote.sh <task-id> --mode <direct-PR|local-only> --yolo <on|off>
+# no-mistakes-prod-only is a registry policy rather than a task mode and is refused.
+# Usage: fm-promote.sh <task-id> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off>
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -58,9 +58,9 @@ for a in "$@"; do
   esac
 done
 [ -z "$want_value" ] || { echo "error: --$want_value requires a value" >&2; exit 1; }
-[ "${#POS[@]}" -ge 1 ] || { echo "usage: fm-promote.sh <task-id> --mode <direct-PR|local-only> --yolo <on|off>" >&2; exit 1; }
+[ "${#POS[@]}" -ge 1 ] || { echo "usage: fm-promote.sh <task-id> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off>" >&2; exit 1; }
 [ "$MODE_SET" -eq 1 ] || {
-  echo "error: promotion requires --mode <direct-PR|local-only>; decide it now from the scout's findings and the project's registered posture in data/projects.md" >&2
+  echo "error: promotion requires --mode <no-mistakes|direct-PR|local-only>; decide it now from the scout's findings and the project's registered posture in data/projects.md" >&2
   exit 1
 }
 [ "$YOLO_SET" -eq 1 ] || {
@@ -68,11 +68,11 @@ done
   exit 1
 }
 case "$MODE" in
-  direct-PR|local-only) ;;
-  no-mistakes|no-mistakes-prod-only)
-    echo "error: This fork does not run no-mistakes; select direct-PR or local-only." >&2
+  no-mistakes|direct-PR|local-only) ;;
+  no-mistakes-prod-only)
+    echo "error: no-mistakes-prod-only is a registry policy, not a task mode; classify this task's surface and resolve it to no-mistakes or direct-PR" >&2
     exit 1 ;;
-  *) echo "error: --mode must be one of direct-PR, local-only (got '$MODE')" >&2; exit 1 ;;
+  *) echo "error: --mode must be one of no-mistakes, direct-PR, local-only (got '$MODE')" >&2; exit 1 ;;
 esac
 case "$YOLO" in
   on|off) ;;

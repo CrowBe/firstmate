@@ -884,7 +884,7 @@ This row is a delivery guard for submit acknowledgement only; recorded worker st
 | Effort | no effort flag exists; requested effort stays in task metadata |
 | Interrupt | single Escape; the pane showed `Cancelled` and the composer returned to its placeholder, so no clear key is needed |
 | Exit | `/exit` |
-| Skill invocation | `/<skill>`; cursor discovers firstmate's user-level skills |
+| Skill invocation | `/<skill>`; cursor discovers firstmate's user-level skills, and `/no-mistakes` autocompleted with firstmate's own description and invoked the skill |
 | Slash popup | real: the first Enter closes the popup and a SECOND Enter submits, the same hazard as grok, covered by the submit core's retried Enter |
 
 ### End-to-end

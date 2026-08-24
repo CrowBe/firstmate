@@ -141,6 +141,16 @@ EOF
   pass "session-end review records only static evidence and requires decisions for dirty output"
 }
 
+test_spawn_and_terminal_recovery_wire_the_static_run_review() {
+  assert_grep 'fm-handoff.sh" plan --task' "$ROOT/bin/fm-spawn.sh" \
+    "spawn did not record a handoff plan before launching a ship task"
+  assert_grep 'fm-handoff.sh") session-end --task' "$ROOT/bin/fm-spawn.sh" \
+    "Claude SessionEnd did not invoke the static handoff review"
+  assert_grep 'fm-handoff.sh" session-end --task' "$ROOT/bin/fm-inactive-reconcile.sh" \
+    "terminal reconciliation did not invoke the static handoff review"
+  pass "spawn and terminal recovery wire the static run review without a bypass"
+}
+
 test_local_landing_requires_the_exact_reviewed_sha() {
   local bundle head out
   make_world local-landing
@@ -173,6 +183,7 @@ EOF
 test_admit_binds_content_identity_without_executing_output
 test_admission_refuses_extra_refs_gitlinks_lfs_and_large_objects
 test_session_end_records_pending_review_and_dirty_work_needs_decision
+test_spawn_and_terminal_recovery_wire_the_static_run_review
 test_local_landing_requires_the_exact_reviewed_sha
 
 echo "all fm-handoff tests passed"

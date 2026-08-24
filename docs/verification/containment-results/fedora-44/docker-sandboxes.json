@@ -1,0 +1,73 @@
+{
+  "adapter": {
+    "adapter": "docker-sandboxes",
+    "configuredEnforcement": {
+      "networkPolicy": "deny **",
+      "workspace": "synthetic-temporary-directory"
+    },
+    "hostEligibility": {
+      "reason": "Docker Sandboxes supports Ubuntu 24.04+, macOS 14+ on Apple silicon, or Windows 11; this adapter measured a different host.",
+      "status": "unsupported-host",
+      "vendorSupported": false
+    },
+    "implementationSha256": "2fe6494a5da9e223caa2abe6708adf11a656565fa0d19423f2eb7d03f0264062",
+    "prerequisites": {
+      "kvm": {
+        "reason": "KVM is loaded and /dev/kvm is readable and writable.",
+        "status": "pass"
+      }
+    },
+    "runtime": {
+      "available": false,
+      "probeError": null,
+      "version": "unavailable"
+    }
+  },
+  "cleanup": {
+    "error": null,
+    "status": "not-created"
+  },
+  "config": {
+    "profile": "marooned-hostile-v1",
+    "sha256": "1bc199b92d5a6cd597b59c508d1a8c5ee76c6a54272c807481012146411b328b"
+  },
+  "execution": {
+    "error": null,
+    "status": "not-run"
+  },
+  "fixture": {
+    "checks": [],
+    "fixture": "marooned-hostile-v1",
+    "schema": 1,
+    "sha256": "b408f43b9eab086dcb3938ef6ce0441532a91a7fea98168ec016bb4c56eb8433",
+    "summary": {
+      "fail": 0,
+      "failedChecks": [],
+      "pass": 0
+    },
+    "verdict": "not-run"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "bootIdSha256": "ff799a92cbff3a1fc33cfb2a1f169930435d0db6b71644da12a367f9ddba56d5",
+    "distribution": "fedora",
+    "distributionVersion": "44",
+    "fingerprint": "12f5043b274de2912b9e3e51585791b2c55f974c69b16b543e34d860cd03bf9c",
+    "kernelRelease": "7.1.8-200.fc44.x86_64",
+    "kvm": {
+      "devicePresent": true,
+      "moduleLoaded": true,
+      "readable": true,
+      "writable": true
+    },
+    "os": "linux"
+  },
+  "informativeOnly": true,
+  "measuredAt": "2026-08-24T01:00:26Z",
+  "schema": 1,
+  "verdict": {
+    "code": "unsupported-host",
+    "explanation": "This unsupported-host result is informative evidence only and must never support a containment claim.",
+    "status": "unsupported-host"
+  }
+}

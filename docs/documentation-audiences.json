@@ -25,6 +25,7 @@
   ],
   "readmeSetupTargets": [
     "docs/configuration.md",
+    "docs/containment.md",
     "docs/wedge-alarm.md",
     "docs/tmux-backend.md",
     "docs/herdr-backend.md",
@@ -253,6 +254,10 @@
       "audience": "operator-current"
     },
     {
+      "path": "docs/containment.md",
+      "audience": "operator-current"
+    },
+    {
       "path": "docs/captain-hold-lifecycle.md",
       "audience": "maintainer-architecture"
     },
@@ -262,6 +267,10 @@
     },
     {
       "path": "docs/examples/crew-dispatch.json",
+      "audience": "operator-example"
+    },
+    {
+      "path": "docs/examples/containment.json",
       "audience": "operator-example"
     },
     {
@@ -354,6 +363,10 @@
     },
     {
       "path": "docs/verification/dispatch-auth.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/verification/containment-adapters.md",
       "audience": "maintainer-verification"
     },
     {

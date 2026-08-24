@@ -1,0 +1,267 @@
+{
+  "adapter": {
+    "adapter": "podman-rootless",
+    "configuredEnforcement": {
+      "capabilities": "drop-all",
+      "hostBindMounts": "none",
+      "network": "none",
+      "noNewPrivileges": true,
+      "rootFilesystem": "read-only",
+      "user": "65532:65532",
+      "userNamespace": "auto"
+    },
+    "hostEligibility": {
+      "reason": "Linux host and rootless Podman runtime are available.",
+      "status": "supported",
+      "vendorSupported": true
+    },
+    "image": "docker.io/library/python@sha256:0ad7f98a97b1b8fcc226f5cbe49f0b95cd6f624582cdc6fbf7e41312075cb401",
+    "imageIdentity": "sha256:0ad7f98a97b1b8fcc226f5cbe49f0b95cd6f624582cdc6fbf7e41312075cb401",
+    "implementationSha256": "e2fced0fff788560d54abab4be2f39e13bddbd446abfaee3f2954b9449388e1b",
+    "runtime": {
+      "available": true,
+      "cgroupVersion": "v2",
+      "probeError": null,
+      "rootless": true,
+      "version": "podman version 5.8.4"
+    }
+  },
+  "config": {
+    "profile": "marooned-hostile-v1",
+    "sha256": "1bc199b92d5a6cd597b59c508d1a8c5ee76c6a54272c807481012146411b328b"
+  },
+  "execution": {
+    "error": null,
+    "status": "completed"
+  },
+  "fixture": {
+    "checks": [
+      {
+        "id": "docker-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/var/run/docker.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/docker.sock",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "podman-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/podman/podman.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/user/65532/podman/podman.sock",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "containerd-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/containerd/containerd.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/var/run/containerd/containerd.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/k3s/containerd/containerd.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/k0s/containerd.sock",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "dbus-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/dbus/system_bus_socket",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/var/run/dbus/system_bus_socket",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "ssh-agent-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/user/65532/gcr/ssh",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "systemd-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/systemd/private",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/systemd/notify",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "cloud-control-socket",
+        "kind": "unix-socket",
+        "observations": [
+          {
+            "outcome": "absent",
+            "path": "/run/host-services/backend.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/host-services/docker.proxy.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/var/run/kubelet.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/google_osconfig_agent.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/var/run/google-cloud-ops-agent.sock",
+            "present": false,
+            "reachable": false
+          },
+          {
+            "outcome": "absent",
+            "path": "/run/azure-vm-agent.sock",
+            "present": false,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      },
+      {
+        "id": "outbound-network",
+        "kind": "network-egress",
+        "observations": [
+          {
+            "error": "OSError: [Errno 101] Network unreachable",
+            "host": "1.1.1.1",
+            "name": "literal-ipv4",
+            "outcome": "connect-denied",
+            "port": 443,
+            "reachable": false
+          },
+          {
+            "error": "OSError: [Errno 101] Network unreachable",
+            "host": "2606:4700:4700::1111",
+            "name": "literal-ipv6",
+            "outcome": "connect-denied",
+            "port": 443,
+            "reachable": false
+          },
+          {
+            "error": "ProbeTimeout: probe timed out",
+            "host": "example.com",
+            "name": "dns-and-tcp",
+            "outcome": "resolution-denied",
+            "port": 443,
+            "reachable": false
+          }
+        ],
+        "verdict": "pass"
+      }
+    ],
+    "fixture": "marooned-hostile-v1",
+    "schema": 1,
+    "sha256": "b408f43b9eab086dcb3938ef6ce0441532a91a7fea98168ec016bb4c56eb8433",
+    "summary": {
+      "fail": 0,
+      "failedChecks": [],
+      "pass": 8
+    },
+    "verdict": "pass"
+  },
+  "host": {
+    "architecture": "x86_64",
+    "bootIdSha256": "ff799a92cbff3a1fc33cfb2a1f169930435d0db6b71644da12a367f9ddba56d5",
+    "distribution": "fedora",
+    "distributionVersion": "44",
+    "fingerprint": "12f5043b274de2912b9e3e51585791b2c55f974c69b16b543e34d860cd03bf9c",
+    "kernelRelease": "7.1.8-200.fc44.x86_64",
+    "kvm": {
+      "devicePresent": true,
+      "moduleLoaded": true,
+      "readable": true,
+      "writable": true
+    },
+    "os": "linux"
+  },
+  "informativeOnly": false,
+  "measuredAt": "2026-08-24T01:00:20Z",
+  "schema": 1,
+  "verdict": {
+    "code": "verified-for-hostile-v1",
+    "explanation": "All checks in marooned-hostile-v1 passed for this exact host boot and adapter configuration.",
+    "status": "pass"
+  }
+}

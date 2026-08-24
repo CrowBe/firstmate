@@ -13,6 +13,7 @@ The tracked code root contains the shared instruction, skill, documentation, wor
 `data/` holds durable private fleet records such as the project and secondmate registries, captain preferences, optional shared captain preferences, learnings, backlog, briefs, and scout reports.
 `state/` holds runtime records such as task metadata, append-only status events, endpoint signals, watcher and wake-queue coordination, inactive terminal-outcome receipts under `state/terminal-outcomes/`, away-mode state, generated Relay artifacts, private secondmate config-reread generations with their retry and quarantine state, per-task steering-inbox records under `state/<id>.inbox/` (`bin/fm-task-inbox-lib.sh`), and parent-owned secondmate pending-reply records under `state/pending-replies/` (`bin/fm-pending-reply-lib.sh`).
 `config/` holds local gitignored operating choices, and `projects/` holds the local project clones that Firstmate reads but changes only through the narrow guarded and concrete captain-approved exceptions in `AGENTS.md`.
+[`docs/containment.md`](containment.md) owns the optional Marooned capsule configuration.
 
 `bin/fm-spawn.sh` owns the base task-metadata fields it emits, while the runtime-backend section below owns backend-specific fields and selector interpretation.
 The producing PR and Relay helpers own the fields they append, `bin/fm-classify-lib.sh` owns status-event vocabulary, and `bin/fm-crew-state.sh` owns current-state reconciliation.
@@ -23,15 +24,6 @@ Wake, watcher, away-mode, and Relay-specific state mechanics remain with their n
 `docs/sessionstart-nudge.md` owns the native session-open adapter tiers that run or nudge the digest command, and the source routing between them.
 `AGENTS.md` retains the run-once and read-once operator rules, lock-refusal safety, installation consent, and direct-report recovery boundaries because those facts apply at every session start.
 Ordinary dead-direct-report recovery is owned by `stuck-crewmate-recovery`, while persistent-secondmate recovery is owned by `secondmate-provisioning`.
-
-## Capsule containment (config/containment.json)
-
-**Verified:** [`docs/containment.md`](containment.md) owns the operator workflow, bounded claims, hostile-fixture floor, and current result links for the first Marooned capsule slice.
-**Verified:** A readable `config/containment.json` under the effective `FM_HOME` overrides the tracked `bin/capsule/default-config.json`, while an explicit `--config` path has highest precedence.
-**Verified:** This local file contains candidate ordering and adapter measurement policy, but it cannot declare an adapter proved because `bin/fm-capsule.sh arm` requires matching machine evidence from the current boot.
-**Verified:** The validator accepts only `refuse` for advisory shaping and unsatisfied evidence, so configuration cannot turn environment shaping into a containment claim.
-**Verified:** This local configuration is not inherited into secondmate homes in this slice.
-**Unverified:** No adapter is a general reference or default merely because it appears first in a host candidate order.
 
 ## Pi Calm preference (config/calm)
 

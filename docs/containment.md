@@ -32,6 +32,8 @@
 
 **Verified:** A readable `$FM_HOME/config/containment.json` overrides the tracked configuration, and an explicit `--config` path overrides both.
 
+**Verified:** This local configuration is not inherited into secondmate homes in this slice.
+
 **Verified:** The configuration validator allows only the two private implementation paths shipped in this slice, so configuration cannot load arbitrary executable adapter paths.
 
 **Verified:** The `marooned-hostile-v1` profile requires the complete eight-check floor, and removing, adding, or renaming a required check makes configuration invalid.

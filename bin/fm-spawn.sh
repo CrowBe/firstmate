@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Spawn a direct report: a crewmate in a treehouse or Orca worktree, or a
 # secondmate in its isolated firstmate home.
-# Usage: fm-spawn.sh <task-id> <project-dir> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off> [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>]
+# Usage: fm-spawn.sh <task-id> <project-dir> --mode <direct-PR|local-only> --yolo <on|off> [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>]
 #        fm-spawn.sh <task-id> <project-dir> --scout [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>]
 #        fm-spawn.sh <task-id> [<firstmate-home>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] --secondmate
 #   --mode and --yolo are this task's delivery contract, REQUIRED for every ship
@@ -14,8 +14,8 @@
 #   scaffolded before that line existed warns once and launches on the flag. When
 #   the explicit mode carries less rigor than the project's standing posture, a
 #   loud one-line deviation notice is printed and the spawn continues.
-#   no-mistakes-prod-only is a registry policy rather than a task mode and is
-#   refused as a flag value.
+#   This fork does not run no-mistakes, so the retired mode is refused as a
+#   flag value rather than becoming a hidden fallback.
 #        fm-spawn.sh <task-id> --relaunch [--harness <name>] [--model <name>] [--effort <level>]
 #   --relaunch launches a replacement agent for an EXISTING task into that
 #   task's own recorded endpoint and worktree instead of creating either. It is
@@ -366,7 +366,7 @@ else
   # and record no delivery posture; secondmate spawns hardcode theirs.
   if [ "$KIND" = ship ]; then
     [ "$MODE_SET" -eq 1 ] || {
-      echo "error: ship spawns require --mode <no-mistakes|direct-PR|local-only>; resolve it at intake from the captain's instruction and the project's registered posture in data/projects.md" >&2
+      echo "error: ship spawns require --mode <direct-PR|local-only>; resolve it at intake from the captain's instruction and the project's registered posture in data/projects.md" >&2
       exit 1
     }
     [ "$YOLO_SET" -eq 1 ] || {
@@ -374,11 +374,11 @@ else
       exit 1
     }
     case "$MODE" in
-      no-mistakes|direct-PR|local-only) ;;
-      no-mistakes-prod-only)
-        echo "error: no-mistakes-prod-only is a registry policy, not a task mode; classify this task's surface and resolve it to no-mistakes or direct-PR at intake" >&2
+      direct-PR|local-only) ;;
+      no-mistakes|no-mistakes-prod-only)
+        echo "error: This fork does not run no-mistakes; select direct-PR or local-only." >&2
         exit 1 ;;
-      *) echo "error: --mode must be one of no-mistakes, direct-PR, local-only (got '$MODE')" >&2; exit 1 ;;
+      *) echo "error: --mode must be one of direct-PR, local-only (got '$MODE')" >&2; exit 1 ;;
     esac
     case "$YOLO" in
       on|off) ;;
@@ -1658,9 +1658,8 @@ else
 fi
 [ -f "$BRIEF" ] || { echo "error: no brief at $BRIEF" >&2; exit 1; }
 
-delivery_rigor_rank() {  # <mode> -> 3 (most rigor) .. 1 (least); 0 = not a task mode
+delivery_rigor_rank() {  # <mode> -> 2 (most rigor) .. 1 (least); 0 = not a task mode
   case "$1" in
-    no-mistakes) echo 3 ;;
     direct-PR) echo 2 ;;
     local-only) echo 1 ;;
     *) echo 0 ;;
@@ -1671,7 +1670,7 @@ delivery_rigor_rank() {  # <mode> -> 3 (most rigor) .. 1 (least); 0 = not a task
 # fm-brief.sh records a ship brief's mode as a fixed "Delivery contract: mode=<mode>"
 # line. A spawn that disagrees would launch a worker whose instructions and whose
 # recorded task delivery differ, which is the exact drift this contract prevents.
-if [ "$KIND" = ship ]; then
+if [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ]; then
   PROJ_NAME=$(basename "$PROJ_ABS")
   BRIEF_MODE=$(sed -n 's/^Delivery contract: mode=\([^ ]*\).*$/\1/p' "$BRIEF" | head -n 1)
   if [ -z "$BRIEF_MODE" ]; then
@@ -1682,11 +1681,10 @@ if [ "$KIND" = ship ]; then
   fi
   # The registry holds the captain's standing posture, so dropping below it is
   # allowed (a current explicit captain instruction wins) but never silent. An
-  # unregistered project resolves to the same no-mistakes standing default, which
-  # is why the notice names the standing posture rather than the registry line. A
-  # conditional policy is excluded: both of its legs are legitimate classifications.
+  # An unregistered project resolves to the direct-PR standing default, which
+  # is why the notice names the standing posture rather than the registry line.
   STANDING_MODE=$("$FM_ROOT/bin/fm-project-mode.sh" --raw "$PROJ_NAME" 2>/dev/null | cut -d' ' -f1) || STANDING_MODE=
-  if [ -n "$STANDING_MODE" ] && [ "$STANDING_MODE" != no-mistakes-prod-only ] \
+  if [ -n "$STANDING_MODE" ] \
      && [ "$(delivery_rigor_rank "$MODE")" -lt "$(delivery_rigor_rank "$STANDING_MODE")" ]; then
     echo "notice: $ID ships mode=$MODE while the standing posture for $PROJ_NAME is $STANDING_MODE - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state" >&2
   fi
@@ -2287,6 +2285,25 @@ fi
 TASK_TMP="/tmp/fm-$ID"
 mkdir -p "$TASK_TMP/gotmp"
 
+# Every ordinary ship task receives its immutable handoff plan before the worker
+# starts. The plan is a guardrail, not a provenance claim: it records the exact
+# base and candidate ref that later admission and review bind by SHA. No bundle
+# is imported and no worker-authored file is executed here.
+if [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ]; then
+  HANDOFF_BASE=$(git -C "$WT" rev-parse HEAD 2>/dev/null) || {
+    echo "error: could not record the handoff base for $ID; refusing to launch without admission planning" >&2
+    exit 1
+  }
+  "$SCRIPT_DIR/fm-handoff.sh" plan --task "$ID" --repo "$PROJ_ABS" \
+    --base "$HANDOFF_BASE" --expect-ref "refs/heads/fm/$ID" >/dev/null || {
+    echo "error: could not record the handoff plan for $ID; refusing to launch" >&2
+    exit 1
+  }
+elif [ "$KIND" = ship ] && { [ ! -f "$STATE/handoff/$ID.plan" ] || [ -L "$STATE/handoff/$ID.plan" ]; }; then
+  echo "error: relaunch requires the task's existing handoff plan; refusing to weaken admission" >&2
+  exit 1
+fi
+
 # Per-harness turn-end hook where enabled: a file that touches
 # state/<id>.turn-ended when the agent finishes a turn. Worktree-resident hooks
 # and token pointers stay out of git's view so they never block teardown's dirty
@@ -2369,7 +2386,11 @@ if [ "$KIND" != secondmate ]; then
       j_submit=$(json_escape "$busy_cmd_prefix busy $busy_suffix --event user-prompt-submit 2>/dev/null || true")
       j_stop=$(json_escape "touch $(shell_quote "$TURNEND"); $busy_cmd_prefix idle $busy_suffix --event stop 2>/dev/null || true")
       j_stopfail=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event stop-failure 2>/dev/null || true")
-      j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true")
+      # Claude's SessionEnd is a real worker-session close, unlike Stop's
+      # ordinary turn boundary. Record the static handoff result here as soon
+      # as that close is observed; the helper never executes worker output and
+      # a later inactive reconciliation repeats it idempotently for recovery.
+      j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true; ($(shell_quote "$SCRIPT_DIR/fm-handoff.sh") session-end --task $(shell_quote "$ID") >/dev/null 2>&1 || true)")
       cat > "$WT/.claude/settings.local.json" <<EOF
 {"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"$j_submit"}]}],"Stop":[{"hooks":[{"type":"command","command":"$j_stop"}]}],"StopFailure":[{"hooks":[{"type":"command","command":"$j_stopfail"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"$j_sessionend"}]}]}}
 EOF

@@ -49,6 +49,15 @@ default_branch() {
 
 BRANCH="fm/$ID"
 git -C "$PROJ" rev-parse --verify --quiet "refs/heads/$BRANCH" >/dev/null || { echo "error: branch $BRANCH does not exist in $PROJ" >&2; exit 1; }
+BRANCH_SHA=$(git -C "$PROJ" rev-parse --verify "$BRANCH^{commit}")
+
+# Local landing accepts only the exact content SHA explicitly approved through
+# Firstmate's handoff record. This binds content identity, not authorship, and
+# deliberately does not build or run the worker's output on the host.
+"$SCRIPT_DIR/fm-handoff.sh" assert-reviewed --task "$ID" --sha "$BRANCH_SHA" >/dev/null || {
+  echo "REFUSED: $BRANCH is not the exact approved handoff content." >&2
+  exit 1
+}
 
 DEFAULT=$(default_branch) || { echo "error: cannot determine default branch for $PROJ; expected origin/HEAD, main, or master" >&2; exit 1; }
 

@@ -3,7 +3,7 @@
 The first mate drives these; interactive entrypoints work by hand too, while `*-lib.sh` files are sourced helpers.
 Each row is one purpose clause only: the script's own header comment is the authoritative description of its behavior, flags, and contracts, so read the header before first use.
 If you have changed away from the firstmate home in an interactive shell, invoke these scripts by absolute path through the repo's `bin/` directory; the scripts self-locate internally after they start.
-The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarized in [architecture.md](architecture.md#no-mistakes-gate-authority-boundary), while `docs/sessionstart-nudge.md` covers the silent session-open hook use; `fm-gate-refuse-lib.sh`'s header owns its exact contract.
+The handoff admission and session-end run-review boundary is summarized in [handoff-admission.md](handoff-admission.md), while `docs/sessionstart-nudge.md` covers the silent session-open hook use; each script header owns its exact contract.
 
 | Script                   | Purpose                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------ |
@@ -53,6 +53,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | `fm-remote-readiness-lib.sh` | Shared remote second-mate readiness gate: check and, when needed, repair then re-check through `fm-remote-doctor.sh` |
 | [`fm-project-origin-lib.sh`](../bin/fm-project-origin-lib.sh) | Accepted origin-form owner shared by both remote provisioning boundaries |
 | `fm-spawn.sh`            | Spawn crewmates, scouts, `id=repo` batches, and secondmates on the resolved harness and runtime backend |
+| `fm-handoff.sh`          | Record and admit inert Git handoffs, then bind explicit review to a content SHA |
 | `fm-backend.sh`          | Runtime-backend selection, meta helpers, selector resolution, and operation dispatch |
 | `fm-backend-hometag-lib.sh` | Shared per-installation home-tag derivation for zellij tab and cmux workspace titles |
 | `fm-composer-lib.sh`     | Single fleet-wide owner of composer shapes, capability-aware screen classification, and verdicts |
@@ -71,7 +72,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | `fm-secondmate-report.sh` | Optional helper to append a correlated parent status or document-pointer report       |
 | `fm-procevent-remote-reply.sh` | Relay the remote-secondmate status stream through non-destructive process-event deltas |
 | `fm-procevent-when.sh`   | Fire a trust-bound deterministic action at most once when its registered condition holds, then wake with the outcome |
-| `fm-gate-refuse-lib.sh`  | Shared no-mistakes gate-context refusal for fleet lifecycle entrypoints               |
+| `fm-gate-refuse-lib.sh`  | Shared retired-upstream gate-context refusal for fleet lifecycle entrypoints          |
 | `fm-watch-arm.sh`        | Verified home-scoped watcher arm wrapper with loud cycle endings and bounded lifecycle ledger |
 | `fm-watch-checkpoint.sh` | Run one bounded foreground watcher checkpoint for Codex-style supervision            |
 | `fm-watch.sh`            | Singleton-safe watcher: absorb benign wakes, detect stalled local-secondmate wake queues, and exit on actionable ones |
@@ -82,7 +83,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | `fm-supervisor-target-lib.sh` | Resolve the shared supervisor target and backend for the daemon and launcher       |
 | `fm-supervise-daemon.sh` | Presence-gated away-mode sub-supervisor: self-handle routine wakes, guard injection by the detected primary harness, escalate batched digests, alert on failed delivery |
 | `fm-crew-state.sh`       | Print one deterministic current-state line for a crew                                |
-| `fm-nm-run-lib.sh`       | Shared branch-and-code-identity attribution for no-mistakes runs                    |
+| `fm-nm-run-lib.sh`       | Shared retired-upstream run-attribution compatibility library                        |
 | `fm-tangle-lib.sh`       | Shared default-branch resolution and primary-checkout tangle classification          |
 | `fm-timeout-lib.sh`      | Single owner of hard-bounded command execution and its fallback watchdog |
 | `fm-timing-lib.sh`       | Single owner of the deferred network stage's per-step elapsed-time records, inert unless a run asks for them |

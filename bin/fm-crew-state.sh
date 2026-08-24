@@ -437,30 +437,9 @@ HAVE_RUN=0
 # run-step block below skips the TOON field parsing entirely for this crew.
 RUN_SOURCE=full
 COARSE_STATUS=""
-# Scouts and secondmates never drive a no-mistakes validation of their own
-# worktree, so skip the lookup for them and read state from pane/log directly.
-if [ "$KIND" = ship ] && [ -n "$CREW_BRANCH" ] && command -v no-mistakes >/dev/null 2>&1; then
-  RUN_OUT=$(nm_run axi status)
-  if [ -n "$RUN_OUT" ]; then
-    run_branch=$(strip_quotes "$(nm_field branch)")
-    if [ -n "$run_branch" ] && [ "$run_branch" = "$CREW_BRANCH" ] && nm_run_head_matches_worktree; then
-      HAVE_RUN=1
-    else
-      # The active-or-most-recent run is for another branch, or same branch with
-      # a rewritten/diverged head (the CLI is alive and answered; only the
-      # attribution missed) - try the coarse fallback.
-      # Deliberately nested inside `[ -n "$RUN_OUT" ]`: an empty/timed-out
-      # primary call means the CLI itself did not respond, so retrying it
-      # immediately with a second bounded call would just double the wait
-      # for no better answer.
-      COARSE_STATUS=$(nm_runs_status_for_branch "$CREW_BRANCH")
-      if [ -n "$COARSE_STATUS" ]; then
-        HAVE_RUN=1
-        RUN_SOURCE=coarse
-      fi
-    fi
-  fi
-fi
+# This fork does not run no-mistakes.
+# Retired run records are never queried, so current state comes from semantic
+# busy state and durable worker events rather than an upstream command.
 
 # --- run-step authoritative path -------------------------------------------
 

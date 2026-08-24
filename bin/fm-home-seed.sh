@@ -466,7 +466,7 @@ clone_project() {
 $(FM_HOME="$FM_HOME" FM_DATA_OVERRIDE="$DATA" "$FM_ROOT/bin/fm-project-mode.sh" "$project")
 EOF
   if [ "$mode" = local-only ]; then
-    echo "error: project $project is local-only; secondmate routes support only no-mistakes and direct-PR projects" >&2
+    echo "error: project $project is local-only; secondmate routes support only direct-PR projects" >&2
     return 1
   fi
   if [ -e "$dst" ]; then
@@ -493,7 +493,7 @@ validate_seed_project() {
 $(FM_HOME="$FM_HOME" FM_DATA_OVERRIDE="$DATA" "$FM_ROOT/bin/fm-project-mode.sh" "$project")
 EOF
   if [ "$mode" = local-only ]; then
-    echo "error: project $project is local-only; secondmate routes support only no-mistakes and direct-PR projects" >&2
+    echo "error: project $project is local-only; secondmate routes support only direct-PR projects" >&2
     return 1
   fi
   url=$(git -C "$src" remote get-url origin 2>/dev/null || true)
@@ -707,25 +707,9 @@ sync_project_registry() {
 }
 
 initialize_no_mistakes_project() {
-  local home=$1 project=$2 created=$3 mode dst
-  mode=$(project_mode_in_home "$home" "$project")
-  [ "$mode" = no-mistakes ] || return 0
-  dst=$(validate_project_destination "$home" "$project") || return 1
-  if git -C "$dst" remote get-url no-mistakes >/dev/null 2>&1; then
-    return 0
-  fi
-  if [ "$created" != 1 ]; then
-    echo "error: seeded project $project at $dst is not initialized for no-mistakes; refusing to mutate preexisting clone" >&2
-    return 1
-  fi
-  command -v no-mistakes >/dev/null 2>&1 || {
-    echo "error: no-mistakes command not found; cannot initialize $project in $home" >&2
-    return 1
-  }
-  ( cd "$dst" && no-mistakes init && no-mistakes doctor ) || {
-    echo "error: failed to initialize no-mistakes for $project at $dst" >&2
-    return 1
-  }
+  # Compatibility call site for old seed transactions.
+  # This fork does not run no-mistakes, so a clone needs no extra initialization.
+  : "${1:?home required}" "${2:?project required}" "${3:?created required}"
 }
 
 write_registry() {

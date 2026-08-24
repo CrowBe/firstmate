@@ -351,6 +351,21 @@ reconcile_direct_child_locked() { # <id> <meta> <secondmate-id-or-empty> <timeou
     'state: failed '*) state='failed' ;;
     *) return 0 ;;
   esac
+  # A planned spawned task is reviewed when its terminal session is reconciled.
+  # The handoff helper only reads Git objects and metadata; it never executes
+  # worker-authored output. Older tasks without a plan predate this guard and
+  # retain their existing terminal-outcome handling.
+  if [ -f "$STATE/handoff/$id.plan" ] && [ ! -L "$STATE/handoff/$id.plan" ]; then
+    local handoff_out handoff_rc handoff_note handoff_key
+    handoff_out=$("$SCRIPT_DIR/fm-handoff.sh" session-end --task "$id" 2>&1) || handoff_rc=$?
+    if [ "${handoff_rc:-0}" -ne 0 ] || printf '%s\n' "$handoff_out" | grep -q '^RUN_REVIEW needs-decision '; then
+      handoff_note=$(printf '%s\n' "$handoff_out" | tail -1 | LC_ALL=C tr '\r\n\t' '   ' | cut -c1-600)
+      handoff_key="handoff-run-review-$id"
+      if ! grep -Fq "[key=$handoff_key]: $handoff_note" "$status" 2>/dev/null; then
+        printf 'needs-decision [key=%s]: %s\n' "$handoff_key" "$handoff_note" >> "$status"
+      fi
+    fi
+  fi
   pr=$(pr_for_task "$meta" "$status")
   incarnation=$(meta_incarnation "$meta")
   fingerprint=$(sha256_text "$incarnation|$id|$state|$pr|$(clean_field "$last")")

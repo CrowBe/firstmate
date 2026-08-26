@@ -93,7 +93,14 @@ def tcp_attempt(name: str, host: str, port: int, family: int) -> dict[str, Any]:
         "port": port,
         "reachable": False,
     }
-    client = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        client = socket.socket(family, socket.SOCK_STREAM)
+    except OSError as exc:
+        # A host without this address family (e.g. no IPv6) cannot reach this
+        # target, which is the same "denied" outcome as a blocked connect.
+        observation["outcome"] = "connect-denied"
+        observation["error"] = f"{exc.__class__.__name__}: {exc}"
+        return observation
     client.settimeout(CONNECT_TIMEOUT_SECONDS)
     try:
         bounded(lambda: client.connect((host, port)))

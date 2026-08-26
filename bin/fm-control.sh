@@ -792,6 +792,16 @@ do_relaunch() {
         || die "task $ID has no instructions at $RELAUNCH_BRIEF; refusing to relaunch a worker with nothing to work from"
       [ "$NOTE_SET" = 1 ] && [ -n "$NOTE" ] \
         || die "relaunch of a $KIND task requires --note (or --note-file): the replacement worker inherits the local copy but none of the conversation, so it must be told what happened"
+      # A ship relaunch reuses the task's existing handoff plan rather than
+      # recording a fresh one against work the worker has already committed, so
+      # bin/fm-spawn.sh refuses to launch a planless ship task. Prove the plan is
+      # there before anything is stopped: without this, a task predating the
+      # handoff guard would have its agent stopped and then be refused its
+      # replacement, leaving no agent running.
+      if [ "$KIND" = ship ] \
+        && { [ ! -f "$STATE/handoff/$ID.plan" ] || [ -L "$STATE/handoff/$ID.plan" ]; }; then
+        die "task $ID has no handoff plan at $STATE/handoff/$ID.plan, so relaunching it would stop the running agent for a launch that must be refused; this task predates the handoff admission gate and must finish or land on its current agent"
+      fi
       ;;
     secondmate)
       # The charter in the secondmate's own home is its instruction source and

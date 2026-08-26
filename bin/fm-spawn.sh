@@ -2287,6 +2287,25 @@ fi
 TASK_TMP="/tmp/fm-$ID"
 mkdir -p "$TASK_TMP/gotmp"
 
+# Every ordinary ship task receives its immutable handoff plan before the worker
+# starts. The plan is a guardrail, not a provenance claim: it records the exact
+# base and candidate ref that later admission and review bind by SHA. No bundle
+# is imported and no worker-authored file is executed here.
+if [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ]; then
+  HANDOFF_BASE=$(git -C "$WT" rev-parse HEAD 2>/dev/null) || {
+    echo "error: could not record the handoff base for $ID; refusing to launch without admission planning" >&2
+    exit 1
+  }
+  "$SCRIPT_DIR/fm-handoff.sh" plan --task "$ID" --repo "$PROJ_ABS" \
+    --base "$HANDOFF_BASE" --expect-ref "refs/heads/fm/$ID" >/dev/null || {
+    echo "error: could not record the handoff plan for $ID; refusing to launch" >&2
+    exit 1
+  }
+elif [ "$KIND" = ship ] && { [ ! -f "$STATE/handoff/$ID.plan" ] || [ -L "$STATE/handoff/$ID.plan" ]; }; then
+  echo "error: relaunch requires the task's existing handoff plan; refusing to weaken admission" >&2
+  exit 1
+fi
+
 # Per-harness turn-end hook where enabled: a file that touches
 # state/<id>.turn-ended when the agent finishes a turn. Worktree-resident hooks
 # and token pointers stay out of git's view so they never block teardown's dirty
@@ -2369,7 +2388,11 @@ if [ "$KIND" != secondmate ]; then
       j_submit=$(json_escape "$busy_cmd_prefix busy $busy_suffix --event user-prompt-submit 2>/dev/null || true")
       j_stop=$(json_escape "touch $(shell_quote "$TURNEND"); $busy_cmd_prefix idle $busy_suffix --event stop 2>/dev/null || true")
       j_stopfail=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event stop-failure 2>/dev/null || true")
-      j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true")
+      # Claude's SessionEnd is a real worker-session close, unlike Stop's
+      # ordinary turn boundary. Record the static handoff result here as soon
+      # as that close is observed; the helper never executes worker output and
+      # a later inactive reconciliation repeats it idempotently for recovery.
+      j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true; ($(shell_quote "$SCRIPT_DIR/fm-handoff.sh") session-end --task $(shell_quote "$ID") >/dev/null 2>&1 || true)")
       cat > "$WT/.claude/settings.local.json" <<EOF
 {"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"$j_submit"}]}],"Stop":[{"hooks":[{"type":"command","command":"$j_stop"}]}],"StopFailure":[{"hooks":[{"type":"command","command":"$j_stopfail"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"$j_sessionend"}]}]}}
 EOF

@@ -9,7 +9,6 @@ CAPSULE="$ROOT/bin/fm-capsule.sh"
 CONFIG="$ROOT/bin/capsule/default-config.json"
 FIXTURE="$ROOT/bin/capsule/hostile-fixture.py"
 DOCKER_ADAPTER="$ROOT/bin/capsule/adapters/docker-sandboxes.sh"
-PODMAN_ADAPTER="$ROOT/bin/capsule/adapters/podman-rootless.sh"
 TMP_ROOT=$(fm_test_tmproot fm-capsule)
 
 run_expect_failure() {
@@ -101,14 +100,16 @@ SH
 }
 
 write_passing_evidence() {
-  local destination=$1 host config_sha fixture_sha implementation_sha checks
+  local destination=$1 adapter=${2:-podman-rootless} host config_sha fixture_sha implementation_sha implementation checks
   host=$("$CAPSULE" host)
   config_sha=$(sha256sum "$CONFIG" | awk '{print $1}')
   fixture_sha=$(sha256sum "$FIXTURE" | awk '{print $1}')
-  implementation_sha=$(sha256sum "$PODMAN_ADAPTER" | awk '{print $1}')
+  implementation=$(jq -r --arg adapter "$adapter" '.adapters[$adapter].implementation' "$CONFIG")
+  implementation_sha=$(sha256sum "$ROOT/$implementation" | awk '{print $1}')
   checks=$(jq -c '[.requiredChecks[] | {id: ., verdict: "pass"}]' "$CONFIG")
   jq -nS \
     --argjson host "$host" \
+    --arg adapter "$adapter" \
     --arg configSha "$config_sha" \
     --arg fixtureSha "$fixture_sha" \
     --arg implementationSha "$implementation_sha" \
@@ -117,7 +118,7 @@ write_passing_evidence() {
         schema: 1,
         host: $host,
         adapter: {
-          adapter: "podman-rootless",
+          adapter: $adapter,
           implementationSha256: $implementationSha,
           hostEligibility: {status: "supported", vendorSupported: true}
         },
@@ -138,7 +139,7 @@ write_passing_evidence() {
 }
 
 test_arm_binds_current_boot_policy_fixture_and_implementation() {
-  local evidence="$TMP_ROOT/evidence" out docker_implementation_sha
+  local evidence="$TMP_ROOT/evidence" out
   mkdir -p "$evidence"
   write_passing_evidence "$evidence/podman-rootless.json"
   out=$("$CAPSULE" arm --adapter podman-rootless --evidence-dir "$evidence") \
@@ -157,16 +158,21 @@ test_arm_binds_current_boot_policy_fixture_and_implementation() {
   run_expect_failure "evidence-does-not-prove-required-floor" \
     "$CAPSULE" arm --adapter podman-rootless --evidence-dir "$evidence"
 
-  write_passing_evidence "$evidence/podman-rootless.json"
-  jq '.informativeOnly = true' "$evidence/podman-rootless.json" > "$evidence/invalid.json"
-  mv "$evidence/invalid.json" "$evidence/podman-rootless.json"
-  docker_implementation_sha=$(sha256sum "$DOCKER_ADAPTER" | awk '{print $1}')
-  jq --arg implementationSha "$docker_implementation_sha" '
-    .adapter.adapter = "docker-sandboxes" |
-    .adapter.implementationSha256 = $implementationSha
-  ' "$evidence/podman-rootless.json" > "$evidence/docker-sandboxes.json"
-  jq '.informativeOnly = false' "$evidence/docker-sandboxes.json" > "$evidence/valid.json"
-  mv "$evidence/valid.json" "$evidence/docker-sandboxes.json"
+  # The preferred (first) candidate differs by host distribution (see
+  # docs/containment.md), so resolve it live rather than assuming which
+  # adapter name is first: arm must refuse when the preferred candidate's
+  # evidence is invalid, never silently degrade to a fully valid secondary.
+  local host_candidates preferred secondary
+  host_candidates=$("$CAPSULE" candidates) || fail "current host did not resolve a candidate order"
+  preferred=$(jq -r '.candidates[0]' <<<"$host_candidates")
+  secondary=$(jq -r '.candidates[1]' <<<"$host_candidates")
+
+  write_passing_evidence "$evidence/$preferred.json" "$preferred"
+  jq '.informativeOnly = true' "$evidence/$preferred.json" > "$evidence/invalid.json"
+  mv "$evidence/invalid.json" "$evidence/$preferred.json"
+
+  write_passing_evidence "$evidence/$secondary.json" "$secondary"
+
   run_expect_failure "evidence-does-not-prove-required-floor" \
     "$CAPSULE" arm --evidence-dir "$evidence"
   pass "arm refuses informative or stale implementation evidence instead of degrading"

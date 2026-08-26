@@ -158,6 +158,12 @@ add_ship_task() {
   printf '%s\n' "fm-$id" > "$dir/fake/windows"
   printf '%s' "$wt" > "$dir/fake/cwd"
   TASK_TMPS+=("/tmp/fm-$id")
+  # Every ship task spawned under the handoff admission gate carries a plan, and
+  # relaunch reuses it rather than recording a fresh one. Record it through the
+  # public interface so these cases exercise the ordinary post-gate path; the
+  # planless case has its own test below.
+  FM_HOME="$home" "$ROOT/bin/fm-handoff.sh" plan --task "$id" --repo "$proj" \
+    --base "$(git -C "$proj" rev-parse HEAD)" --expect-ref "refs/heads/fm/$id" >/dev/null
 }
 
 run_control() {  # <case-dir> <args...>
@@ -870,6 +876,21 @@ test_missing_instructions_refuse_before_stopping_anything() {
   pass "fm-control relaunch: a worker with nothing to work from is never launched"
 }
 
+test_planless_ship_relaunch_refuses_before_stopping_anything() {
+  local dir out rc
+  dir=$(new_case noplan rl11b)
+  add_ship_task "$dir" rl11b claude
+  rm -f "$dir/home/state/handoff/rl11b.plan"
+  out=$(run_control "$dir" rl11b relaunch --note "x"); rc=$?
+  expect_code 1 "$rc" "a ship task with no handoff plan should refuse to relaunch"
+  assert_contains "$out" "no handoff plan" "the refusal should name the missing handoff plan"
+  [ "$(cat "$dir/fake/command")" = claude ] \
+    || fail "a planless relaunch must refuse before the agent is stopped, never leave no agent running"
+  [ ! -e "$dir/home/state/rl11b.control-relaunch" ] \
+    || fail "a refusal before the agent is touched must leave no relaunch journal"
+  pass "fm-control relaunch: a task predating the handoff gate refuses with its agent still running"
+}
+
 test_checkpoint_refusal_leaves_the_record_byte_identical() {
   local dir before after
   dir=$(new_case bytes rl12)
@@ -1339,6 +1360,7 @@ test_muse_session_binding_is_retired_on_a_harness_switch
 test_cursor_session_binding_is_retired_on_a_harness_switch
 test_missing_worktree_refuses_before_stopping_anything
 test_missing_instructions_refuse_before_stopping_anything
+test_planless_ship_relaunch_refuses_before_stopping_anything
 test_checkpoint_refusal_leaves_the_record_byte_identical
 test_checkpoint_refuses_uninspectable_head_and_status
 test_launch_failure_keeps_the_prior_record_and_reports_it

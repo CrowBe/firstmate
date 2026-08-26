@@ -164,9 +164,10 @@ test_local_landing_requires_the_exact_reviewed_sha() {
 project=$PROJECT
 mode=local-only
 EOF
-  out=$(FM_ROOT_OVERRIDE="$ROOT" FM_HOME="$WORLD" FM_STATE_OVERRIDE="$STATE" \
-    "$ROOT/bin/fm-merge-local.sh" landing 2>&1)
-  [ "$?" -ne 0 ] || fail "local landing bypassed missing SHA-bound review"
+  if out=$(FM_ROOT_OVERRIDE="$ROOT" FM_HOME="$WORLD" FM_STATE_OVERRIDE="$STATE" \
+    "$ROOT/bin/fm-merge-local.sh" landing 2>&1); then
+    fail "local landing bypassed missing SHA-bound review"
+  fi
   assert_contains "$out" 'REFUSED: fm/landing is not the exact approved handoff content.' \
     "local landing did not name the missing handoff approval"
   head=$(git -C "$PROJECT" rev-parse refs/heads/fm/landing)

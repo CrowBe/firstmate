@@ -141,7 +141,7 @@ parse_plan() { # <task>
 }
 
 command_plan() {
-  local task= repo= base= expect_ref= arg repo_real resolved plan
+  local task='' repo='' base='' expect_ref='' arg repo_real resolved plan
   while [ "$#" -gt 0 ]; do
     arg=$1
     case "$arg" in
@@ -191,7 +191,7 @@ command_plan() {
 }
 
 command_admit() {
-  local task= bundle= arg bundle_digest bundle_bytes quarantine_root quarantine empty_hooks qrepo
+  local task='' bundle='' arg bundle_digest bundle_bytes quarantine_root quarantine empty_hooks qrepo
   local heads head_count head_oid head_ref actual_head base_objects head_objects expected_objects actual_objects new_objects tree_entries tree_names blob_file
   while [ "$#" -gt 0 ]; do
     arg=$1
@@ -239,7 +239,7 @@ command_admit() {
     || refuse "$task" object-integrity-failed "$bundle_digest" "$quarantine"
   safe_git -C "$qrepo" fsck --connectivity-only --no-reflogs >/dev/null 2>&1 \
     || refuse "$task" object-connectivity-failed "$bundle_digest" "$quarantine"
-  actual_head=$(safe_git -C "$qrepo" rev-parse --verify refs/handoff/head^{commit} 2>/dev/null) \
+  actual_head=$(safe_git -C "$qrepo" rev-parse --verify 'refs/handoff/head^{commit}' 2>/dev/null) \
     || refuse "$task" output-not-commit "$bundle_digest" "$quarantine"
   safe_git -C "$qrepo" merge-base --is-ancestor refs/handoff/base refs/handoff/head >/dev/null 2>&1 \
     || refuse "$task" output-not-descendant "$bundle_digest" "$quarantine"
@@ -313,7 +313,7 @@ command_admit() {
 }
 
 command_session_end() {
-  local task= arg meta worktree expected head dirty bundle output rc=0 decision quarantine qrepo
+  local task='' arg meta worktree expected head dirty bundle rc=0 decision quarantine qrepo
   while [ "$#" -gt 0 ]; do
     arg=$1
     case "$arg" in
@@ -347,7 +347,7 @@ command_session_end() {
     printf 'RUN_REVIEW needs-decision bundle-capture-failed\n'
     return
   fi
-  output=$("$0" admit --task "$task" --bundle "$bundle" 2>&1) || rc=$?
+  "$0" admit --task "$task" --bundle "$bundle" >/dev/null 2>&1 || rc=$?
   rm -f "$bundle"
   if [ "$rc" -ne 0 ]; then
     append_record "$task" session-end needs-decision "code=admission-refused" "sha=$head"
@@ -369,7 +369,7 @@ command_session_end() {
 }
 
 command_review() {
-  local task= sha= reviewer= verdict= arg decision admitted
+  local task='' sha='' reviewer='' verdict='' arg decision admitted
   while [ "$#" -gt 0 ]; do
     arg=$1
     case "$arg" in
@@ -399,7 +399,7 @@ command_review() {
 }
 
 command_assert_reviewed() {
-  local task= sha= arg review reviewed verdict
+  local task='' sha='' arg review reviewed verdict
   while [ "$#" -gt 0 ]; do
     arg=$1
     case "$arg" in

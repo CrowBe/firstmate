@@ -100,15 +100,28 @@ SH
   pass "Docker measurement labels unsupported Fedora evidence as informative only"
 }
 
+# adapter_implementation <adapter>: the tracked implementation path whose digest
+# arm binds the evidence to.
+adapter_implementation() {
+  case "$1" in
+    podman-rootless) printf '%s\n' "$PODMAN_ADAPTER" ;;
+    docker-sandboxes) printf '%s\n' "$DOCKER_ADAPTER" ;;
+    *) fail "unknown adapter: $1" ;;
+  esac
+}
+
+# write_passing_evidence <destination> [adapter]: evidence that arms on this exact
+# host, boot, configuration, fixture, and adapter implementation.
 write_passing_evidence() {
-  local destination=$1 host config_sha fixture_sha implementation_sha checks
+  local destination=$1 adapter=${2:-podman-rootless} host config_sha fixture_sha implementation_sha checks
   host=$("$CAPSULE" host)
   config_sha=$(sha256sum "$CONFIG" | awk '{print $1}')
   fixture_sha=$(sha256sum "$FIXTURE" | awk '{print $1}')
-  implementation_sha=$(sha256sum "$PODMAN_ADAPTER" | awk '{print $1}')
+  implementation_sha=$(sha256sum "$(adapter_implementation "$adapter")" | awk '{print $1}')
   checks=$(jq -c '[.requiredChecks[] | {id: ., verdict: "pass"}]' "$CONFIG")
   jq -nS \
     --argjson host "$host" \
+    --arg adapter "$adapter" \
     --arg configSha "$config_sha" \
     --arg fixtureSha "$fixture_sha" \
     --arg implementationSha "$implementation_sha" \
@@ -117,7 +130,7 @@ write_passing_evidence() {
         schema: 1,
         host: $host,
         adapter: {
-          adapter: "podman-rootless",
+          adapter: $adapter,
           implementationSha256: $implementationSha,
           hostEligibility: {status: "supported", vendorSupported: true}
         },
@@ -138,7 +151,7 @@ write_passing_evidence() {
 }
 
 test_arm_binds_current_boot_policy_fixture_and_implementation() {
-  local evidence="$TMP_ROOT/evidence" out docker_implementation_sha
+  local evidence="$TMP_ROOT/evidence" out first_candidate second_candidate
   mkdir -p "$evidence"
   write_passing_evidence "$evidence/podman-rootless.json"
   out=$("$CAPSULE" arm --adapter podman-rootless --evidence-dir "$evidence") \
@@ -157,16 +170,20 @@ test_arm_binds_current_boot_policy_fixture_and_implementation() {
   run_expect_failure "evidence-does-not-prove-required-floor" \
     "$CAPSULE" arm --adapter podman-rootless --evidence-dir "$evidence"
 
-  write_passing_evidence "$evidence/podman-rootless.json"
-  jq '.informativeOnly = true' "$evidence/podman-rootless.json" > "$evidence/invalid.json"
-  mv "$evidence/invalid.json" "$evidence/podman-rootless.json"
-  docker_implementation_sha=$(sha256sum "$DOCKER_ADAPTER" | awk '{print $1}')
-  jq --arg implementationSha "$docker_implementation_sha" '
-    .adapter.adapter = "docker-sandboxes" |
-    .adapter.implementationSha256 = $implementationSha
-  ' "$evidence/podman-rootless.json" > "$evidence/docker-sandboxes.json"
-  jq '.informativeOnly = false' "$evidence/docker-sandboxes.json" > "$evidence/valid.json"
-  mv "$evidence/valid.json" "$evidence/docker-sandboxes.json"
+  # Degradation is only observable against THIS host's candidate order: give the
+  # first candidate informative-only evidence and the second complete evidence,
+  # so a refusal proves arm never switches past a failed candidate. Naming the
+  # adapters directly would only exercise that on hosts whose order happens to
+  # start with the one being spoiled.
+  first_candidate=$("$CAPSULE" candidates | jq -r '.candidates[0]')
+  second_candidate=$("$CAPSULE" candidates | jq -r '.candidates[1]')
+  [ -n "$first_candidate" ] && [ -n "$second_candidate" ] \
+    && [ "$first_candidate" != "$second_candidate" ] \
+    || fail "this host does not order two distinct candidates to test degradation against"
+  write_passing_evidence "$evidence/$first_candidate.json" "$first_candidate"
+  jq '.informativeOnly = true' "$evidence/$first_candidate.json" > "$evidence/invalid.json"
+  mv "$evidence/invalid.json" "$evidence/$first_candidate.json"
+  write_passing_evidence "$evidence/$second_candidate.json" "$second_candidate"
   run_expect_failure "evidence-does-not-prove-required-floor" \
     "$CAPSULE" arm --evidence-dir "$evidence"
   pass "arm refuses informative or stale implementation evidence instead of degrading"

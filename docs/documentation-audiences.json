@@ -370,6 +370,10 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/verification/config-levers.md",
+      "audience": "maintainer-verification"
+    },
+    {
       "path": "docs/verification/containment-adapters.md",
       "audience": "maintainer-verification"
     },

@@ -106,19 +106,31 @@ tasks_in() {  # <home> <tasks-axi args...>
   (cd "$home" && tasks-axi "$@")
 }
 
+# iso_from_epoch <epoch>: portable epoch-to-UTC-ISO8601, BSD date first, GNU
+# date as the fallback, matching the ISO-to-epoch idiom already used below.
+iso_from_epoch() {
+  date -u -r "$1" +'%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+    || date -u -d "@$1" +'%Y-%m-%dT%H:%M:%SZ'
+}
+
 # seed_commitment <home> <obligation> <request> <platform> <work-home> <work-id>
 # Simulates the intake half that already works today: the relay mention arrives,
 # the typed obligation is created with its opaque thread binding, the work is
 # bound, and the private request context is retained.
 seed_commitment() {
   local home=$1 obligation=$2 request=$3 platform=$4 work_home=$5 work_id=$6
-  jq -n --arg r "$request" --arg p "$platform" \
+  local now received_at
+  now=$(date +%s)
+  received_at=$(iso_from_epoch $((now - 7 * 86400)))
+  SEED_FOLLOWUP_EXPIRES_AT=$(iso_from_epoch $((now + 7 * 86400)))
+  jq -n --arg r "$request" --arg p "$platform" --arg ra "$received_at" \
+      --arg fe "$SEED_FOLLOWUP_EXPIRES_AT" \
     '{request_id:$r, platform:$p,
       context_binding:{version:"ctx1", value:("ctx1_" + $r)},
       public_safe_summary:"fix worker placement when two spaces share a name",
-      received_at:"2026-07-30T10:00:00Z",
-      followup_expires_at:"2026-08-06T10:00:00Z",
-      reservation_expires_at:"2026-08-06T10:00:00Z"}' > "$home/request.json"
+      received_at:$ra,
+      followup_expires_at:$fe,
+      reservation_expires_at:$fe}' > "$home/request.json"
   jq -n '{type:"pr-merged", project:"firstmate",
           required_deliverables:["pr_url"], completion_policy:"all-required"}' \
     > "$home/expected.json"
@@ -154,13 +166,17 @@ seed_commitment() {
 # The pi-rearm shape: a report-ready promised-final bound to a secondmate.
 seed_repro_commitment() {   # <home> <obligation> <request> <work-home> <work-id>
   local home=$1 obligation=$2 request=$3 work_home=$4 work_id=$5
-  jq -n --arg r "$request" \
+  local now received_at
+  now=$(date +%s)
+  received_at=$(iso_from_epoch $((now - 7 * 86400)))
+  SEED_REPRO_FOLLOWUP_EXPIRES_AT=$(iso_from_epoch $((now + 7 * 86400)))
+  jq -n --arg r "$request" --arg ra "$received_at" --arg fe "$SEED_REPRO_FOLLOWUP_EXPIRES_AT" \
     '{request_id:$r, platform:"discord",
       context_binding:{version:"ctx1", value:("ctx1_" + $r)},
       public_safe_summary:"reproduce a Pi recovery notification loop",
-      received_at:"2026-08-21T01:12:00Z",
-      followup_expires_at:"2026-08-28T01:12:00Z",
-      reservation_expires_at:"2026-08-28T01:12:00Z"}' > "$home/request.json"
+      received_at:$ra,
+      followup_expires_at:$fe,
+      reservation_expires_at:$fe}' > "$home/request.json"
   jq -n '{type:"report-ready", project:"firstmate",
           required_deliverables:["report_path"], completion_policy:"all-required"}' \
     > "$home/expected.json"
@@ -1832,7 +1848,8 @@ test_rechain_refuses_unclaimed_existing_destination() {
   tasks_in "$home" public-followup add public-final-existing-b \
     --request-context-file "$home/request.json" --purpose promised-final \
     --expected-final-file "$home/collision-expected.json" \
-    --expires-at 2026-08-28T01:12:00Z >/dev/null || fail "could not seed destination collision"
+    --expires-at "$SEED_REPRO_FOLLOWUP_EXPIRES_AT" >/dev/null \
+    || fail "could not seed destination collision"
 
   expect_failure "a first rechain must not adopt an unrelated existing obligation" \
     run_pf "$home" rechain public-final-existing-b --from public-final-existing-a \
@@ -2010,8 +2027,8 @@ test_expiry_escalation_uses_now_override() {
   local home out exp now_closing now_expired registry tmp
   home=$(make_home expiry-window)
   seed_repro_commitment "$home" pf-exp req-exp main work-exp
-  exp=$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' '2026-08-28T01:12:00Z' +%s 2>/dev/null) \
-    || exp=$(date -u -d '2026-08-28T01:12:00Z' +%s)
+  exp=$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$SEED_REPRO_FOLLOWUP_EXPIRES_AT" +%s 2>/dev/null) \
+    || exp=$(date -u -d "$SEED_REPRO_FOLLOWUP_EXPIRES_AT" +%s)
   now_closing=$((exp - 3600))
   now_expired=$((exp + 60))
   out=$(FMX_NOW_OVERRIDE="$now_expired" run_pf "$home" pending)

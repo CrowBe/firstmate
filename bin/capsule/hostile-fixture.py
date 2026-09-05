@@ -93,7 +93,13 @@ def tcp_attempt(name: str, host: str, port: int, family: int) -> dict[str, Any]:
         "port": port,
         "reachable": False,
     }
-    client = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        client = socket.socket(family, socket.SOCK_STREAM)
+    except OSError as exc:
+        observation["outcome"] = "socket-unavailable"
+        observation["error"] = f"{exc.__class__.__name__}: {exc}"
+        return observation
+
     client.settimeout(CONNECT_TIMEOUT_SECONDS)
     try:
         bounded(lambda: client.connect((host, port)))
@@ -123,7 +129,13 @@ def dns_tcp_attempt() -> dict[str, Any]:
         return observation
 
     for family, socktype, protocol, _canonname, address in addresses:
-        client = socket.socket(family, socktype, protocol)
+        try:
+            client = socket.socket(family, socktype, protocol)
+        except OSError as exc:
+            observation["outcome"] = "socket-unavailable"
+            observation["error"] = f"{exc.__class__.__name__}: {exc}"
+            continue
+
         client.settimeout(CONNECT_TIMEOUT_SECONDS)
         try:
             bounded(lambda: client.connect(address))

@@ -16,6 +16,8 @@
 
 **Verified:** Both results bind policy SHA-256 `1bc199b92d5a6cd597b59c508d1a8c5ee76c6a54272c807481012146411b328b` and hostile-fixture SHA-256 `b408f43b9eab086dcb3938ef6ce0441532a91a7fea98168ec016bb4c56eb8433`.
 
+**Verified:** That fixture digest is no longer the digest of `bin/capsule/hostile-fixture.py`, which changed after this measurement to record an unopenable address family as a denial, so this page is a dated record and not a current arming claim.
+
 **Verified:** The measurement command was `bin/fm-capsule.sh measure-all --output-dir docs/verification/containment-results/fedora-44`.
 
 **Verified:** The arm check command was `bin/fm-capsule.sh arm --evidence-dir docs/verification/containment-results/fedora-44`.

@@ -83,6 +83,8 @@ podman pull docker.io/library/python@sha256:0ad7f98a97b1b8fcc226f5cbe49f0b95cd6f
 
 **Verified:** The egress check passes only when every outbound attempt is denied.
 
+**Verified:** An address family the host cannot open at all is recorded as a `socket-unavailable` observation with no reachability, so a host without an IPv6 stack produces a denial rather than aborting the measurement.
+
 **Unverified:** Passing this minimum floor does not prove broader filesystem isolation, source confidentiality, credential non-disclosure, denial-of-service resistance, crash safety, or handoff integrity.
 
 ## Fedora 44 evidence
@@ -96,3 +98,9 @@ podman pull docker.io/library/python@sha256:0ad7f98a97b1b8fcc226f5cbe49f0b95cd6f
 **Unverified:** Docker Sandboxes has not run this fixture on a vendor-supported host in this repository.
 
 **Unverified:** Rootless Podman has not passed the broader Marooned assurance programme beyond this explicitly listed fixture floor.
+
+**Verified:** That evidence binds hostile-fixture SHA-256 `b408f43b9eab086dcb3938ef6ce0441532a91a7fea98168ec016bb4c56eb8433`, which predates the current hostile fixture, so it proves nothing about the fixture in the tree today.
+
+**Verified:** `arm` therefore refuses that committed evidence, exactly as it refuses any evidence bound to a superseded fixture digest.
+
+**Unverified:** No Fedora measurement has been taken against the current fixture, so restoring a passing Fedora claim requires re-running `measure-all` on a Fedora host.

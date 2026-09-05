@@ -72,6 +72,50 @@ PY
   pass "hostile fixture attempts every non-negotiable control-plane and egress check"
 }
 
+test_hostile_fixture_records_denial_when_a_socket_cannot_be_created() {
+  # A host with no IPv6 stack cannot create an AF_INET6 socket at all, which is
+  # exactly the egress denial this check exists to observe. Record it as an
+  # observation distinct from connect-denied instead of aborting the whole run.
+  python3 - "$FIXTURE" <<'FIXTUREPY' \
+    || fail "a socket that could not be created aborted the fixture instead of recording a denial"
+import importlib.util
+import socket
+import sys
+
+spec = importlib.util.spec_from_file_location("hostile_fixture", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+class RefusingSockets:
+    """Socket construction fails the way a missing address family makes it fail."""
+
+    AF_INET6 = socket.AF_INET6
+    SOCK_STREAM = socket.SOCK_STREAM
+
+    @staticmethod
+    def socket(*_args, **_kwargs):
+        raise OSError(97, "Address family not supported by protocol")
+
+    @staticmethod
+    def getaddrinfo(*_args, **_kwargs):
+        return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2606:4700:10::6814:179a", 443, 0, 0))]
+
+
+module.socket = RefusingSockets
+observations = [
+    module.tcp_attempt("literal-ipv6", "2606:4700:4700::1111", 443, RefusingSockets.AF_INET6),
+    module.dns_tcp_attempt(),
+]
+raise SystemExit(
+    0
+    if all(item["outcome"] == "socket-unavailable" and item["reachable"] is False for item in observations)
+    else 1
+)
+FIXTUREPY
+  pass "hostile fixture records an unavailable socket as a denial rather than crashing"
+}
+
 test_docker_unsupported_host_is_informative_only() {
   local host="$TMP_ROOT/fedora-host.json" fakebin result
   fakebin=$(fm_fakebin "$TMP_ROOT/docker")
@@ -212,8 +256,27 @@ test_committed_measurements_preserve_claim_boundaries() {
   pass "committed Fedora measurements retain supported and unsupported claim labels"
 }
 
+test_committed_measurement_fixture_digest_is_current_or_documented() {
+  # arm binds evidence to the fixture digest, so editing the fixture silently
+  # retires the committed Fedora measurement. Either the evidence was re-taken
+  # against the current fixture, or the containment page says so in the open.
+  local evidence="$ROOT/docs/verification/containment-results/fedora-44" current recorded file
+  current=$(sha256sum "$FIXTURE" | awk '{print $1}')
+  for file in "$evidence/podman-rootless.json" "$evidence/docker-sandboxes.json"; do
+    recorded=$(jq -r '.fixture.sha256' "$file") || fail "committed measurement lost its fixture digest: $file"
+    [ "$recorded" = "$current" ] && continue
+    grep -q "$recorded" "$ROOT/docs/containment.md" \
+      || fail "committed evidence predates the current fixture and docs/containment.md does not record digest $recorded"
+    grep -q "predates the current hostile fixture" "$ROOT/docs/containment.md" \
+      || fail "docs/containment.md does not state that the Fedora evidence predates the current hostile fixture"
+  done
+  pass "committed Fedora evidence either binds the current fixture or is documented as predating it"
+}
+
 test_configuration_is_strict_and_orders_two_real_adapters
 test_hostile_fixture_covers_the_required_floor
+test_hostile_fixture_records_denial_when_a_socket_cannot_be_created
 test_docker_unsupported_host_is_informative_only
 test_arm_binds_current_boot_policy_fixture_and_implementation
 test_committed_measurements_preserve_claim_boundaries
+test_committed_measurement_fixture_digest_is_current_or_documented
